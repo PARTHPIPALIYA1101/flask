@@ -5,8 +5,15 @@ import time
 
 app = Flask(__name__)
 
-ATTENDANCE_SESSION = {"active": False, "token": None, "start_time": 0, "allowed_bssid": None}
+# Global session variables
+ATTENDANCE_SESSION = {"active": False, "token": None, "start_time": 0, "allowed_bssid": None, "token_expiry": 0}
 SESSION_ATTENDANCE = []
+
+# Generate a token with 15-second expiry
+def generate_token(length=8, expiry_seconds=15):
+    token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+    ATTENDANCE_SESSION["token_expiry"] = int(time.time()) + expiry_seconds
+    return token
 
 @app.route("/start_attendance", methods=["POST"])
 def start_attendance():
@@ -14,17 +21,24 @@ def start_attendance():
     teacher = data.get("teacher")
     bssid = data.get("bssid")
 
+    if not teacher or not bssid:
+        return jsonify({"status": "error", "message": "Missing teacher or BSSID"}), 400
+    if ATTENDANCE_SESSION["active"]:
+        return jsonify({"status": "error", "message": "Attendance session already active"}), 400
+
     SESSION_ATTENDANCE.clear()
-    ATTENDANCE_SESSION["active"] = True
-    ATTENDANCE_SESSION["allowed_bssid"] = bssid
-    ATTENDANCE_SESSION["start_time"] = int(time.time())
-    ATTENDANCE_SESSION["token"] = generate_token()
+    ATTENDANCE_SESSION.update({
+        "active": True,
+        "allowed_bssid": bssid,
+        "start_time": int(time.time()),
+        "token": generate_token()
+    })
 
     return jsonify({"status": "success", "teacher": teacher, "token": ATTENDANCE_SESSION["token"]})
 
 @app.route("/stop_attendance", methods=["POST"])
 def stop_attendance():
-    ATTENDANCE_SESSION.update({"active": False, "token": None, "allowed_bssid": None, "start_time": 0})
+    ATTENDANCE_SESSION.update({"active": False, "token": None, "allowed_bssid": None, "start_time": 0, "token_expiry": 0})
     SESSION_ATTENDANCE.clear()
     return jsonify({"status": "success", "message": "Attendance stopped"})
 
@@ -39,24 +53,39 @@ def get_token():
 def mark_attendance():
     if not ATTENDANCE_SESSION["active"]:
         return jsonify({"status": "error", "message": "No active session"}), 400
+
     data = request.json
     roll_number = data.get("roll_number")
-    token = data.get("token")
     bssid = data.get("bssid")
+    token = data.get("token")
 
+    # Validate payload
+    if not roll_number or not bssid or not token:
+        return jsonify({"status": "error", "message": "Missing roll_number, bssid, or token"}), 400
+
+    # Check token expiry
+    if int(time.time()) > ATTENDANCE_SESSION.get("token_expiry", 0):
+        return jsonify({"status": "error", "message": "Token expired"}), 400
+
+    # Check already marked
     if roll_number in SESSION_ATTENDANCE:
         return jsonify({"status": "error", "message": "Already marked"}), 400
+
+    # Validate token and BSSID
     if token != ATTENDANCE_SESSION["token"]:
         return jsonify({"status": "error", "message": "Invalid token"}), 400
     if bssid != ATTENDANCE_SESSION["allowed_bssid"]:
         return jsonify({"status": "error", "message": "Invalid BSSID"}), 400
 
+    # Mark attendance
     SESSION_ATTENDANCE.append(roll_number)
     return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"})
 
-def generate_token(length=8):
-    return ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
+# Optional: check attendance list
+@app.route("/attendance_list", methods=["GET"])
+def attendance_list():
+    return jsonify({"attendance": SESSION_ATTENDANCE})
 
-# Only for local testing (Render ignores this)
+# Only for local testing
 if __name__ == "__main__":
     app.run(debug=True)
