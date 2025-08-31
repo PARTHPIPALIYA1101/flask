@@ -34,20 +34,20 @@ def start_attendance():
         "token": generate_token()
     })
 
-    return jsonify({"status": "success", "teacher": teacher, "token": ATTENDANCE_SESSION["token"]})
+    return jsonify({"status": "success", "teacher": teacher, "token": ATTENDANCE_SESSION["token"]}), 200
 
 @app.route("/stop_attendance", methods=["POST"])
 def stop_attendance():
     ATTENDANCE_SESSION.update({"active": False, "token": None, "allowed_bssid": None, "start_time": 0, "token_expiry": 0})
     SESSION_ATTENDANCE.clear()
-    return jsonify({"status": "success", "message": "Attendance stopped"})
+    return jsonify({"status": "success", "message": "Attendance stopped"}), 200
 
 @app.route("/get_token", methods=["GET"])
 def get_token():
     if not ATTENDANCE_SESSION["active"]:
         return jsonify({"status": "error", "message": "No active session"}), 400
     ATTENDANCE_SESSION["token"] = generate_token()
-    return jsonify({"status": "success", "token": ATTENDANCE_SESSION["token"]})
+    return jsonify({"status": "success", "token": ATTENDANCE_SESSION["token"]}), 200
 
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
@@ -79,12 +79,12 @@ def mark_attendance():
 
     # Mark attendance
     SESSION_ATTENDANCE.append(roll_number)
-    return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"})
+    return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
 
 # Optional: check attendance list
 @app.route("/attendance_list", methods=["GET"])
 def attendance_list():
-    return jsonify({"attendance": SESSION_ATTENDANCE})
+    return jsonify({"attendance": SESSION_ATTENDANCE}), 200
 
 # Only for local testing
 if __name__ == "__main__":
