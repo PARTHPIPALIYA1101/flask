@@ -6,14 +6,23 @@ import time
 app = Flask(__name__)
 
 # Global session variables
-ATTENDANCE_SESSION = {"active": False, "token": None, "start_time": 0, "allowed_bssid": None, "token_expiry": 0}
+ATTENDANCE_SESSION = {
+    "active": False,
+    "token": None,
+    "start_time": 0,
+    "allowed_bssid": None,
+    "token_expiry": 0,
+    "teacher": None
+}
 SESSION_ATTENDANCE = []
+
 
 # Generate a token with 15-second expiry
 def generate_token(length=8, expiry_seconds=15):
     token = ''.join(random.choices(string.ascii_uppercase + string.digits, k=length))
     ATTENDANCE_SESSION["token_expiry"] = int(time.time()) + expiry_seconds
     return token
+
 
 @app.route("/start_attendance", methods=["POST"])
 def start_attendance():
@@ -26,28 +35,52 @@ def start_attendance():
     if ATTENDANCE_SESSION["active"]:
         return jsonify({"status": "error", "message": "Attendance session already active"}), 400
 
+    # reset
     SESSION_ATTENDANCE.clear()
     ATTENDANCE_SESSION.update({
         "active": True,
         "allowed_bssid": bssid,
         "start_time": int(time.time()),
+        "teacher": teacher,
         "token": generate_token()
     })
 
-    return jsonify({"status": "success", "teacher": teacher, "token": ATTENDANCE_SESSION["token"]}), 200
+    return jsonify({
+        "status": "success",
+        "teacher": teacher,
+        "token": ATTENDANCE_SESSION["token"]
+    }), 200
+
 
 @app.route("/stop_attendance", methods=["POST"])
 def stop_attendance():
-    ATTENDANCE_SESSION.update({"active": False, "token": None, "allowed_bssid": None, "start_time": 0, "token_expiry": 0})
+    ATTENDANCE_SESSION.update({
+        "active": False,
+        "token": None,
+        "allowed_bssid": None,
+        "start_time": 0,
+        "token_expiry": 0,
+        "teacher": None
+    })
     SESSION_ATTENDANCE.clear()
     return jsonify({"status": "success", "message": "Attendance stopped"}), 200
+
 
 @app.route("/get_token", methods=["GET"])
 def get_token():
     if not ATTENDANCE_SESSION["active"]:
         return jsonify({"status": "error", "message": "No active session"}), 400
-    ATTENDANCE_SESSION["token"] = generate_token()
-    return jsonify({"status": "success", "token": ATTENDANCE_SESSION["token"]}), 200
+
+    now = int(time.time())
+    if now > ATTENDANCE_SESSION["token_expiry"]:
+        ATTENDANCE_SESSION["token"] = generate_token()
+
+    return jsonify({
+        "status": "success",
+        "token": ATTENDANCE_SESSION["token"],
+        "expires_in": ATTENDANCE_SESSION["token_expiry"] - now
+    }), 200
+
 
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
@@ -81,11 +114,15 @@ def mark_attendance():
     SESSION_ATTENDANCE.append(roll_number)
     return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
 
-# Optional: check attendance list
+
 @app.route("/attendance_list", methods=["GET"])
 def attendance_list():
-    return jsonify({"attendance": SESSION_ATTENDANCE}), 200
+    return jsonify({
+        "teacher": ATTENDANCE_SESSION.get("teacher"),
+        "attendance": SESSION_ATTENDANCE
+    }), 200
 
-# Only for local testing
+
+# Run locally
 if __name__ == "__main__":
     app.run(debug=True)
