@@ -1,4 +1,4 @@
 Flask==3.0.3
 Flask-SQLAlchemy==3.1.1
-supabase-py
-gunicorn
+gunicorn==22.0.0
+supabase==2.10.0
