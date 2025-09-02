@@ -2,8 +2,14 @@ from flask import Flask, request, jsonify
 import random
 import string
 import time
+from supabase import create_client
 
 app = Flask(__name__)
+
+# 🔹 Supabase direct credentials (⚠️ keep safe in production)
+SUPABASE_URL = "https://lqdxvspqlsbosgflgivm.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHh2c3BxbHNib3NnZmxnaXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3OTI2MDQsImV4cCI6MjA3MjM2ODYwNH0.rGHmLUgs4xC3jL8FExT1yNWw5dzYf2c5ALhveFo1qsk"   # replace with your key
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Global session variables
 ATTENDANCE_SESSION = {
@@ -44,6 +50,16 @@ def start_attendance():
         "teacher": teacher,
         "token": generate_token()
     })
+
+    # ⚠️ NOTE: Supabase Python client does not support direct CREATE TABLE queries.
+    # You should create the teacher tables manually in Supabase OR use one shared table.
+    # Example of a shared table structure in SQL:
+    # CREATE TABLE attendance (
+    #     id SERIAL PRIMARY KEY,
+    #     teacher TEXT NOT NULL,
+    #     roll_number TEXT NOT NULL,
+    #     marked_at TIMESTAMP DEFAULT NOW()
+    # );
 
     return jsonify({
         "status": "success",
@@ -92,37 +108,47 @@ def mark_attendance():
     bssid = data.get("bssid")
     token = data.get("token")
 
-    # Validate payload
     if not roll_number or not bssid or not token:
         return jsonify({"status": "error", "message": "Missing roll_number, bssid, or token"}), 400
 
-    # Check token expiry
     if int(time.time()) > ATTENDANCE_SESSION.get("token_expiry", 0):
         return jsonify({"status": "error", "message": "Token expired"}), 400
 
-    # Check already marked
     if roll_number in SESSION_ATTENDANCE:
         return jsonify({"status": "error", "message": "Already marked"}), 400
 
-    # Validate token and BSSID
     if token != ATTENDANCE_SESSION["token"]:
         return jsonify({"status": "error", "message": "Invalid token"}), 400
     if bssid != ATTENDANCE_SESSION["allowed_bssid"]:
         return jsonify({"status": "error", "message": "Invalid BSSID"}), 400
 
-    # Mark attendance
+    # Save attendance in memory
     SESSION_ATTENDANCE.append(roll_number)
+
+    # Save attendance in Supabase (shared table recommended)
+    supabase.table("attendance").insert({
+        "teacher": ATTENDANCE_SESSION['teacher'],
+        "roll_number": roll_number
+        # marked_at auto-generated
+    }).execute()
+
     return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
 
 
 @app.route("/attendance_list", methods=["GET"])
 def attendance_list():
+    teacher = ATTENDANCE_SESSION.get("teacher")
+    if not teacher:
+        return jsonify({"status": "error", "message": "No teacher in session"}), 400
+
+    # Fetch records from Supabase
+    response = supabase.table("attendance").select("*").eq("teacher", teacher).execute()
+
     return jsonify({
-        "teacher": ATTENDANCE_SESSION.get("teacher"),
-        "attendance": SESSION_ATTENDANCE
+        "teacher": teacher,
+        "attendance": response.data  # includes roll_number + marked_at
     }), 200
 
 
-# Run locally
 if __name__ == "__main__":
     app.run(debug=True)
