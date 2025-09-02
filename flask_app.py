@@ -125,14 +125,15 @@ def mark_attendance():
     # Save attendance in memory
     SESSION_ATTENDANCE.append(roll_number)
 
-    # Save attendance in Supabase (shared table recommended)
-    supabase.table("attendance").insert({
+    # ✅ Insert into Supabase table (renamed to teacher_details)
+    supabase.table("teacher_details").insert({
         "teacher": ATTENDANCE_SESSION['teacher'],
         "roll_number": roll_number
         # marked_at auto-generated
     }).execute()
 
     return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
+
 
 
 @app.route("/attendance_list", methods=["GET"])
