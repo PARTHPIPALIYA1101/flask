@@ -98,41 +98,45 @@ def get_token():
     }), 200
 
 
+ALLOWED_BSSIDS = ["00:14:22:01:23:45", "00:16:3e:5e:6c:00"]  # classroom WiFi
+
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
     if not ATTENDANCE_SESSION["active"]:
-        return jsonify({"status": "error", "message": "No active session"}), 400
+        return jsonify({"error": "No active attendance session"}), 400
 
-    data = request.json
+    data = request.get_json()
     roll_number = data.get("roll_number")
     bssid = data.get("bssid")
-    token = data.get("token")
 
-    if not roll_number or not bssid or not token:
-        return jsonify({"status": "error", "message": "Missing roll_number, bssid, or token"}), 400
+    if not roll_number or not bssid:
+        return jsonify({"error": "Missing roll_number or bssid"}), 401
 
-    if int(time.time()) > ATTENDANCE_SESSION.get("token_expiry", 0):
-        return jsonify({"status": "error", "message": "Token expired"}), 400
+    # 🔐 Check BSSID
+    if bssid not in ALLOWED_BSSIDS:
+        return jsonify({"error": "Invalid network. Connect to classroom WiFi."}), 403
 
-    if roll_number in SESSION_ATTENDANCE:
-        return jsonify({"status": "error", "message": "Already marked"}), 400
+    teacher_table = ATTENDANCE_SESSION.get("teacher")
+    if not teacher_table:
+        return jsonify({"error": "No teacher selected for attendance"}), 400
 
-    if token != ATTENDANCE_SESSION["token"]:
-        return jsonify({"status": "error", "message": "Invalid token"}), 400
-    if bssid != ATTENDANCE_SESSION["allowed_bssid"]:
-        return jsonify({"status": "error", "message": "Invalid BSSID"}), 400
+    timestamp = datetime.now().isoformat()
 
-    # Save attendance in memory
-    SESSION_ATTENDANCE.append(roll_number)
+    try:
+        supabase.table(f'"{teacher_table}"').insert({
+            "roll_number": roll_number,
+            "bssid": bssid,
+            "timestamp": timestamp
+        }).execute()
 
-    # ✅ Insert into Supabase table (renamed to teacher_details)
-    supabase.table(f'"{teacher_table}"').insert({
-        "teacher": ATTENDANCE_SESSION['teacher'],
-        "roll_number": roll_number
-        # marked_at auto-generated
-    }).execute()
+        return jsonify({
+            "status": "success",
+            "message": f"Attendance marked for {roll_number}"
+        }), 200
 
-    return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 
 
