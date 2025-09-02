@@ -126,7 +126,7 @@ def mark_attendance():
     SESSION_ATTENDANCE.append(roll_number)
 
     # ✅ Insert into Supabase table (renamed to teacher_details)
-    supabase.table("teacher_details").insert({
+    supabase.table(f'"{teacher_table}"').insert({
         "teacher": ATTENDANCE_SESSION['teacher'],
         "roll_number": roll_number
         # marked_at auto-generated
