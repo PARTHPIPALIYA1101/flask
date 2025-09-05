@@ -112,17 +112,17 @@ def mark_attendance():
     # Mark locally
     SESSION_ATTENDANCE.append(roll_number)
 
-    # Push to Supabase table
+    # Push to Supabase attendance table
     payload = {
-        "student_id": roll_number,                         # maps to rollno
-        "subject_id": ATTENDANCE_SESSION["teacher"],       # store subject name/id
-        "date": datetime.now().strftime("%Y-%m-%d"),       # YYYY-MM-DD
+        "student_id": roll_number,                       # roll_number from request
+        "subject_id": ATTENDANCE_SESSION["teacher"],     # still stored as "teacher" in session
+        "date": datetime.now().strftime("%Y-%m-%d"),     # current date
         "status": "present"
     }
 
     try:
         res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/attendance",  # lowercase table name
+            f"{SUPABASE_URL}/rest/v1/attendance",  # <-- must be your table name
             headers={
                 "apikey": SUPABASE_KEY,
                 "Authorization": f"Bearer {SUPABASE_KEY}",
