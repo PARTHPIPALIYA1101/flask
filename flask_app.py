@@ -111,8 +111,24 @@ def mark_attendance():
     # Mark locally
     SESSION_ATTENDANCE.append(roll_number)
 
-    # Push to Supabase table (NO id field)
+    # 1. Get max id from Supabase
+    try:
+        res = requests.get(
+            f"{SUPABASE_URL}/rest/v1/attendance?select=id&order=id.desc&limit=1",
+            headers={
+                "apikey": SUPABASE_KEY,
+                "Authorization": f"Bearer {SUPABASE_KEY}"
+            }
+        )
+        max_id = res.json()[0]["id"] if res.status_code == 200 and res.json() else 0
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Supabase fetch error: {str(e)}"}), 500
+
+    new_id = max_id + 1
+
+    # 2. Insert with manual id
     payload = {
+        "id": new_id,
         "student_id": roll_number,
         "subject_id": ATTENDANCE_SESSION["teacher"],
         "date": datetime.now().strftime("%Y-%m-%d"),
@@ -136,6 +152,7 @@ def mark_attendance():
         return jsonify({"status": "error", "message": f"Supabase error: {str(e)}"}), 500
 
     return jsonify({"status": "success", "message": f"Attendance marked for {roll_number}"}), 200
+
 
 @app.route("/attendance_list", methods=["GET"])
 def attendance_list():
