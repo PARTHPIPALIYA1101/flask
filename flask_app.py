@@ -84,7 +84,6 @@ def get_token():
         "token": ATTENDANCE_SESSION["token"],
         "expires_in": ATTENDANCE_SESSION["token_expiry"] - now
     }), 200
-
 @app.route("/mark_attendance", methods=["POST"])
 def mark_attendance():
     if not ATTENDANCE_SESSION["active"]:
@@ -112,17 +111,17 @@ def mark_attendance():
     # Mark locally
     SESSION_ATTENDANCE.append(roll_number)
 
-    # Push to Supabase attendance table
+    # Push to Supabase table (NO id field)
     payload = {
-        "student_id": roll_number,                       # roll_number from request
-        "subject_id": ATTENDANCE_SESSION["teacher"],     # still stored as "teacher" in session
-        "date": datetime.now().strftime("%Y-%m-%d"),     # current date
+        "student_id": roll_number,
+        "subject_id": ATTENDANCE_SESSION["teacher"],
+        "date": datetime.now().strftime("%Y-%m-%d"),
         "status": "present"
     }
 
     try:
         res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/attendance",  # <-- must be your table name
+            f"{SUPABASE_URL}/rest/v1/attendance",
             headers={
                 "apikey": SUPABASE_KEY,
                 "Authorization": f"Bearer {SUPABASE_KEY}",
