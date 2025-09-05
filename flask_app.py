@@ -7,8 +7,8 @@ import requests
 app = Flask(__name__)
 
 # Supabase config
-SUPABASE_URL = "https://lqdxvspqlsbosgflgivm.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxxZHh2c3BxbHNib3NnZmxnaXZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3OTI2MDQsImV4cCI6MjA3MjM2ODYwNH0.rGHmLUgs4xC3jL8FExT1yNWw5dzYf2c5ALhveFo1qsk"
+SUPABASE_URL = "https://nbkduqhirhnirxssribc.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5ia2R1cWhpcmhuaXJ4c3NyaWJjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY5MTE5ODksImV4cCI6MjA3MjQ4Nzk4OX0.4hEnQwToDplh3kqth_OA45TEpSLlaQPJ1S3Jl3tEHMA"
 
 # Global session variables
 ATTENDANCE_SESSION = {
