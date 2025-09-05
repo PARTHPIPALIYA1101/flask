@@ -1,10 +1,10 @@
 from flask import Flask, request, jsonify
+import requests
 from supabase import create_client, Client
 from datetime import datetime
 import random
 import string
 import time
-import requests
 
 app = Flask(__name__)
 
