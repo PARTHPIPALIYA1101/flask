@@ -31,6 +31,7 @@ def generate_token(length=8, expiry_seconds=15):
     return token
 
 
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 @app.route("/login", methods=["POST"])
 def login():
