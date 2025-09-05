@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from supabase import create_client
+from supabase import create_client, Client
 from datetime import datetime
 import random
 import string
