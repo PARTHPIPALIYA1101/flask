@@ -1,5 +1,6 @@
-Flask==2.3.3
 Flask-SQLAlchemy==3.1.1
+Flask==3.0.0
+supabase==2.4.3
 gunicorn==22.0.0
 git+https://github.com/supabase-community/supabase-py.git
 requests==2.31.0
