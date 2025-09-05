@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from datetime import datetime
 import random
 import string
 import time
@@ -94,36 +95,34 @@ def mark_attendance():
     bssid = data.get("bssid")
     token = data.get("token")
 
-    # Validate payload
     if not roll_number or not bssid or not token:
         return jsonify({"status": "error", "message": "Missing roll_number, bssid, or token"}), 400
 
-    # Check token expiry
     if int(time.time()) > ATTENDANCE_SESSION.get("token_expiry", 0):
         return jsonify({"status": "error", "message": "Token expired"}), 400
 
-    # Check already marked
     if roll_number in SESSION_ATTENDANCE:
         return jsonify({"status": "error", "message": "Already marked"}), 400
 
-    # Validate token and BSSID
     if token != ATTENDANCE_SESSION["token"]:
         return jsonify({"status": "error", "message": "Invalid token"}), 400
     if bssid != ATTENDANCE_SESSION["allowed_bssid"]:
         return jsonify({"status": "error", "message": "Invalid BSSID"}), 400
 
-    # Mark attendance locally
+    # Mark locally
     SESSION_ATTENDANCE.append(roll_number)
 
-    # Push to Supabase
+    # Push to Supabase table
     payload = {
-        "subject1": ATTENDANCE_SESSION["teacher"],
-        "roll_no": roll_number
+        "student_id": roll_number,                         # maps to rollno
+        "subject_id": ATTENDANCE_SESSION["teacher"],       # store subject name/id
+        "date": datetime.now().strftime("%Y-%m-%d"),       # YYYY-MM-DD
+        "status": "present"
     }
 
     try:
         res = requests.post(
-            f"{SUPABASE_URL}/rest/v1/Attendance",
+            f"{SUPABASE_URL}/rest/v1/attendance",  # lowercase table name
             headers={
                 "apikey": SUPABASE_KEY,
                 "Authorization": f"Bearer {SUPABASE_KEY}",
