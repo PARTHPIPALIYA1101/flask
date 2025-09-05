@@ -30,6 +30,32 @@ def generate_token(length=8, expiry_seconds=15):
     ATTENDANCE_SESSION["token_expiry"] = int(time.time()) + expiry_seconds
     return token
 
+
+
+@app.route("/login", methods=["POST"])
+def login():
+    data = request.json
+    email = data.get("email")
+    passwd = data.get("passwd")
+
+    try:
+        # Query teacher_subjects table
+        result = supabase.table("teacher_subjects").select("*").eq("email", email).execute()
+
+        if len(result.data) == 1:
+            teacher = result.data[0]
+            if teacher["passwd"] == passwd:
+                return jsonify({
+                    "status": "success",
+                    "teacher_id": teacher["teacher_id"],
+                    "subject_id": teacher["subject_id"]
+                })
+
+        return jsonify({"status": "error", "message": "Invalid credentials"}), 401
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/start_attendance", methods=["POST"])
 def start_attendance():
     data = request.json
